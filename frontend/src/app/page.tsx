@@ -1,101 +1,175 @@
+"use client";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { Web3 } from "web3";
+
+const contractAddress = "0x724B1ceeFe0fc149F921A41a7B20C0E4482b83F6";
+const abi = require("@/lib/abi.json");
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [web3, setWeb3] = useState<Web3 | null>(null);
+  const [contract, setContract] = useState<any | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [provider, setProvider] = useState<string | null>(null);
+  const [chainId, setChainId] = useState<string | null>(null);
+  const [latestBlock, setLatestBlock] = useState<string | null>(null);
+  const [accountButtonDisabled, setAccountButtonDisabled] =
+    useState<boolean>(false);
+  const [accounts, setAccounts] = useState<string[] | null>(null);
+  const [connectedAccount, setConnectedAccount] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const [models, setModels] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    if (window.ethereum) {
+      setWeb3(new Web3(window.ethereum));
+      if (window.ethereum.isMetaMask) {
+        setProvider("Connected to Ethereum with MetaMask.");
+      } else {
+        setProvider("Non-MetaMask Ethereum provider detected.");
+      }
+    } else {
+      setWarning("Please install MetaMask");
+      setAccountButtonDisabled(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    async function getChainId() {
+      if (web3 === null) {
+        return;
+      }
+      setChainId(`Chain ID: ${await web3.eth.getChainId()}`);
+    }
+
+    async function getLatestBlock() {
+      if (web3 === null) {
+        return;
+      }
+      setLatestBlock(`Latest Block: ${await web3.eth.getBlockNumber()}`);
+      const blockSubscription = await web3.eth.subscribe("newBlockHeaders");
+      blockSubscription.on("data", (block) => {
+        setLatestBlock(`Latest Block: ${block.number}`);
+      });
+    }
+
+    getChainId();
+    getLatestBlock();
+  }, [web3]);
+
+  async function requestAccounts() {
+    if (web3 === null) {
+      return;
+    }
+    await window.ethereum.request({ method: "eth_requestAccounts" });
+    document.getElementById("requestAccounts")?.remove();
+    const allAccounts = await web3.eth.getAccounts();
+    setAccounts(allAccounts);
+    setConnectedAccount(`Account: ${allAccounts[0]}`);
+  }
+  async function updateContract() {
+    if (contract === null) {
+      setContract(new web3!.eth.Contract(abi, contractAddress));
+    }
+  }
+
+  async function listModel() {
+    if (web3 === null) {
+      return;
+    }
+    updateContract();
+    try {
+      const name = (document.getElementById("name") as HTMLInputElement).value;
+      const description = (
+        document.getElementById("description") as HTMLInputElement
+      ).value;
+      const price = (document.getElementById("price") as HTMLInputElement)
+        .value;
+
+      const tx = await contract.methods
+        .listModel(name, description, price)
+        .send({ from: accounts![0] });
+      console.log("Model listed. Transaction Hash:", tx.transactionHash);
+    } catch (error) {
+      console.error("Error listing model:", error);
+    }
+  }
+
+  async function getModelList() {
+    updateContract();
+    const models = await contract.methods.creatorModels.call();
+    setModels(models);
+  }
+
+  async function getModelDetails(modelId: any) {
+    updateContract();
+    const modelDetails = await contract.methods.getModelDetails(modelId).call();
+    console.log("Model Details:", modelDetails);
+  }
+  return (
+    <>
+      <div id="warn" style={{ color: "red" }}>
+        {warning}
+      </div>
+      <div id="provider">{provider}</div>
+
+      <div id="connectedAccount">{connectedAccount}</div>
+      <div>
+        <button
+          onClick={() => requestAccounts()}
+          id="requestAccounts"
+          disabled={accountButtonDisabled}>
+          Request MetaMask Accounts
+        </button>
+      </div>
+      <div className="border-slate-300 border-x-4 border-y-4">
+        <h1>Model List</h1>
+        <button onClick={() => getModelList()}>Refresh</button>
+        <div>
+          {models?.map((model) => (
+            <div key={model.id}>
+              <h2>{model.name}</h2>
+              <p>{model.description}</p>
+              <p>{model.price}</p>
+            </div>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      </div>
+      <br />
+      <div>
+        <h1 className="text-3xl font-bold">List a new model</h1>
+        <div>
+          <h2>Name</h2>
+          <input
+            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="name"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        </div>
+        <div>
+          <h2>Description</h2>
+          <input
+            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            type="text"
+            id="description"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+        </div>
+        <div>
+          <h2>Price</h2>
+          <input
+            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            type="text"
+            id="price"
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        </div>
+        <button onClick={() => listModel()}>List Model</button>
+      </div>
+      <br />
+      <div>
+        <h1 className="text-3xl font-bold">Get model</h1>
+        <button onClick={() => getModelDetails(0)}>Get Model</button>
+
+        
+      </div>
+    </>
   );
 }
