@@ -1,12 +1,13 @@
 "use client";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Web3 } from "web3";
 
-const contractAddress = "0x6A032186a44303e421E2f4B8adc1cB3f9cCae6c9";
+const contractAddress = "0xc7eFa61c14c4AA2811Fb078639dCA63E7e88eD6c";
 import abi from "@/lib/abi.json";
+import { get } from "http";
 
 class Model {
+  id: string;
   name: string;
   description: string;
   price: string;
@@ -14,12 +15,14 @@ class Model {
   rating: string;
 
   constructor(
+    id: string,
     name: string,
     description: string,
     price: string,
     creator: string,
     rating: string
   ) {
+    this.id = id;
     this.name = name;
     this.description = description;
     this.price = price;
@@ -57,6 +60,7 @@ export default function Home() {
   const [connectedAccount, setConnectedAccount] = useState<string | null>(null);
 
   const [models, setModels] = useState<any[] | null>(null);
+  const [userModels, setUserModels] = useState<any[] | null>(null);
   const [modelDetails, setModelDetails] = useState<Model | null>(null);
 
   useEffect(() => {
@@ -99,7 +103,7 @@ export default function Home() {
     }
     const chainId = await web3.eth.getChainId();
     setChainId(chainId);
-    if(chainId != BigInt(17000)){
+    if (chainId != BigInt(17000)) {
       setWarning("Please connect to Holesky Testnet");
     }
     setChainName(chainIdToName(chainId));
@@ -111,6 +115,22 @@ export default function Home() {
     }
   }
 
+  async function getUserOwnedModels() {
+    if (web3 === null) {
+      return;
+    }
+    updateContract();
+    try {
+      const models = await contract.methods
+        .getUserOwnedModels()
+        .call({ from: accounts![0] });
+      if (models != null) {
+        setUserModels(models);
+      }
+    } catch (error) {
+      console.error("Error listing model:", error);
+    }
+  }
   async function listModel() {
     if (web3 === null) {
       return;
@@ -135,9 +155,21 @@ export default function Home() {
 
   async function getModelList() {
     updateContract();
-    const models = await contract.methods.getModels().call();
+    getUserOwnedModels();
+    const blockchainModels = await contract.methods.getModels().call();
     console.log(models);
-    setModels(models);
+    if (userModels == null) return;
+
+    for (let i = 0; i < blockchainModels.length; i++) {
+      blockchainModels[i].isOwned = false;
+      for (let j = 0; j < userModels.length; j++) {
+        if (blockchainModels[i].id == userModels[j].id) {
+          blockchainModels[i].isOwned = true;
+          break;
+        }
+      }
+    }
+    setModels(blockchainModels);
   }
 
   async function getDetiledModel() {
@@ -159,7 +191,8 @@ export default function Home() {
       modelDetails["1"] + "",
       modelDetails["2"] + "",
       modelDetails["3"] + "",
-      modelDetails["4"] + ""
+      modelDetails["4"] + "",
+      modelDetails["5"] + ""
     );
     console.log("Model Details:", modelDetails);
     setModelDetails(modelInfo);
@@ -191,16 +224,27 @@ export default function Home() {
 
   async function purchaseModel(modelId: number) {
     updateContract();
-    const balance = await web3!.eth.getBalance(accounts![0]);
-    console.log(`Purchasing model ${modelId} with balance ${balance}`);
-    await contract.methods.purchaseModel(modelId, balance).call();
-    alert("Model purchased");
+    const currentBalance = await web3!.eth.getBalance(accounts![0]);
+    const price = models![modelId].price;
+    if (currentBalance < price) {
+      alert("Insufficient funds");
+      return;
+    }
+    try {
+      await contract.methods
+        .purchaseModel(modelId)
+        .send({ from: accounts![0], value: price });
+    } catch (e) {
+      alert("Error purchasing model: " + e);
+      return;
+    }
+    alert(`Model ${models![modelId].name} purchased`);
   }
 
   async function withdraw() {
     updateContract();
-    const total = await contract.methods.withdrawFunds().call();
-    alert(`Balance withdrawn. Total: ${total + ""}`);
+    await contract.methods.withdrawFunds().send({ from: accounts![0] });
+    alert("Funds withdrawn");
   }
 
   return (
@@ -238,6 +282,9 @@ export default function Home() {
           <thead>
             <tr>
               <th className="border border-white px-4 py-2 text-center w-12">
+                Is owned?
+              </th>
+              <th className="border border-white px-4 py-2 text-center w-12">
                 Id
               </th>
               <th className="border border-white px-4 py-2 text-center">
@@ -269,6 +316,9 @@ export default function Home() {
           <tbody>
             {models?.map((model, key) => (
               <tr key={key}>
+                <td className="border border-white px-4 py-2 text-center">
+                  {model.isOwned ? "Yes" : "No"}
+                </td>
                 <td className="border border-white px-4 py-2 text-center">
                   {key}
                 </td>
