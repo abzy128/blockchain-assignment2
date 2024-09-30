@@ -123,17 +123,17 @@ export default function Home() {
       .getModelDetails(intModelId)
       .call();
     const modelInfo = new Model(
-      modelDetails["0"] + '',
-      modelDetails["1"] + '',
-      modelDetails["2"] + '',
-      modelDetails["3"] + '',
-      modelDetails["4"] + ''
+      modelDetails["0"] + "",
+      modelDetails["1"] + "",
+      modelDetails["2"] + "",
+      modelDetails["3"] + "",
+      modelDetails["4"] + ""
     );
     console.log("Model Details:", modelDetails);
     setModelDetails(modelInfo);
   }
 
-  async function rateModel(modelId: number) {
+  async function rateAiModel(modelId: number) {
     updateContract();
     const rating = prompt("Enter rating (1-10)");
     if (rating === null || rating === "") {
@@ -254,7 +254,7 @@ export default function Home() {
                 <td className="text-center">
                   <button
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
-                    onClick={() => rateModel(key)}>
+                    onClick={() => rateAiModel(key)}>
                     Rate
                   </button>
                 </td>

@@ -68,3 +68,18 @@ npm start
 ### Model details
 
 ![Model details](./screenshots/details.png)
+
+## Examples
+
+### Example 1
+
+The example model
+
+```
+name = demoModel
+description = example
+price = 499
+creator = 0x874e736DEdCaD7b001A3e53bfc7EDfd4415676F4
+```
+
+![Example 1](./screenshots/example1.png)
