@@ -23,6 +23,7 @@ Clone the repository
 
 ```bash
 git clone https://github.com/abzy128/blockchain-assignment2.git
+cd blockchain-assignment2
 ```
 
 ### Step 2
