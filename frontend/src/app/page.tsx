@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Web3 } from "web3";
 
 const contractAddress = "0x6A032186a44303e421E2f4B8adc1cB3f9cCae6c9";
-const abi = require("@/lib/abi.json");
+import abi from "@/lib/abi.json";
 
 class Model {
   name: string;
@@ -28,8 +28,26 @@ class Model {
   }
 }
 
+const chainIdToName = (chainId: BigInt | null) => {
+  if (chainId === null) {
+    return "No chain ID detected";
+  }
+  switch (chainId) {
+    case BigInt(1):
+      return "Ethereum Mainnet";
+    case BigInt(11155111):
+      return "Sepolia Testnet";
+    case BigInt(17000):
+      return "Holesky Testnet";
+    default:
+      return "Unknown";
+  }
+};
+
 export default function Home() {
   const [web3, setWeb3] = useState<Web3 | null>(null);
+  const [chainId, setChainId] = useState<BigInt | null>(null);
+  const [chainName, setChainName] = useState<string | null>(null);
   const [contract, setContract] = useState<any | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [provider, setProvider] = useState<string | null>(null);
@@ -72,7 +90,21 @@ export default function Home() {
     const allAccounts = await web3.eth.getAccounts();
     setAccounts(allAccounts);
     setConnectedAccount(`Account: ${allAccounts[0]}`);
+    getChainId();
   }
+
+  async function getChainId() {
+    if (web3 === null) {
+      return;
+    }
+    const chainId = await web3.eth.getChainId();
+    setChainId(chainId);
+    if(chainId != BigInt(17000)){
+      setWarning("Please connect to Holesky Testnet");
+    }
+    setChainName(chainIdToName(chainId));
+  }
+
   async function updateContract() {
     if (contract === null) {
       setContract(new web3!.eth.Contract(abi, contractAddress));
@@ -177,9 +209,8 @@ export default function Home() {
         {warning}
       </div>
       <div id="provider">{provider}</div>
-
       <div id="connectedAccount">{connectedAccount}</div>
-
+      <div id="connectedTo">Chain name: {chainName}</div>
       <div>
         <button
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
