@@ -3,7 +3,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Web3 } from "web3";
 
-const contractAddress = "0x724B1ceeFe0fc149F921A41a7B20C0E4482b83F6";
+const contractAddress = "0x6A032186a44303e421E2f4B8adc1cB3f9cCae6c9";
 const abi = require("@/lib/abi.json");
 
 export default function Home() {
@@ -98,7 +98,7 @@ export default function Home() {
 
   async function getModelList() {
     updateContract();
-    const models = await contract.methods.creatorModels.call();
+    const models = await contract.methods.getModels.call();
     setModels(models);
   }
 

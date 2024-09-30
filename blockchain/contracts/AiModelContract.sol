@@ -13,7 +13,6 @@ contract AiModelContract {
     }
 
     Model[] public models;
-    mapping(uint256 => address[]) public modelPurchasers;
 
     function getModels() public view returns (Model[] memory) {
         return models;
@@ -23,11 +22,10 @@ contract AiModelContract {
         models.push(Model(name, description, price, msg.sender, 0, 0, 0));
     }
     
-    function purchaseModel(uint256 modelId) public payable {
+    function purchaseModel(uint256 modelId, uint userBalance) public {
         Model storage model = models[modelId];
-        require(msg.value >= model.price, "Not enough funds");
-        model.balance += msg.value;
-        modelPurchasers[modelId].push(msg.sender);
+        require(userBalance >= model.price, "Insufficient funds");
+        model.balance += model.price;
     }
     
     function rateModel(uint256 modelId, uint8 rating) public {
@@ -37,21 +35,15 @@ contract AiModelContract {
         model.ratingCount++;
     }
 
-    function withdrawFunds() public {
-        uint256 balance = 0;
-        for (uint256 i = 0; i < models.length; i++) {
+    function withdrawFunds() public view returns (uint256) {
+        uint256 totalBalance = 0;
+        for (uint i = 0; i < models.length; i++) {
             Model storage model = models[i];
             if (model.creator == msg.sender) {
-                balance += model.balance;
-                model.balance = 0;
+                totalBalance += model.balance;
             }
         }
-        require(balance > 0, "No funds to withdraw");
-        payable(msg.sender).transfer(balance);
-    }
-
-    function getModelPurchasers(uint256 modelId) public view returns (address[] memory) {
-        return modelPurchasers[modelId];
+        return totalBalance;
     }
     
     function getModelDetails(uint256 modelId) public view returns (string memory, string memory, uint256, address, uint256) {
