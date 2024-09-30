@@ -1,15 +1,69 @@
 # Assignment 2
 
+## Prerequisites
+
+- Node >= 20
+- npm >= 7
+
+<details>
+
+<summary>Info</summary>
+
+Tested and works with Node 22.3.0 and npm 10.8.1
+
+</details>
+
 ## Usage
 
-### Prerequisites
-
-- Python (latest)
+You can try this project here: [https://crypto.abzy.kz/](https://crypto.abzy.kz/)
 
 ### Step 1
 
-do smth on step one
+Clone the repository
 
-## Examples
+```bash
+git clone https://github.com/abzy128/blockchain-assignment2.git
+```
 
-Some examples here
+### Step 2
+
+Install dependencies for the project
+
+```bash
+cd frontend
+npm install
+```
+
+### Step 3
+
+Build the project
+
+```bash
+npm run build
+```
+
+### Step 4
+
+Start the server
+
+```bash
+npm start
+```
+
+## Screenshots
+
+### Main page
+
+![Main page](./screenshots/main.png)
+
+### Listing new model
+
+![Listing new model](./screenshots/listing.png)
+
+### Logging in with Metamask
+
+![Logging in with Metamask](./screenshots/metamask.png)
+
+### Model details
+
+![Model details](./screenshots/details.png)
