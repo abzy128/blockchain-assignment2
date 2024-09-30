@@ -19,6 +19,7 @@ export default function Home() {
   const [connectedAccount, setConnectedAccount] = useState<string | null>(null);
 
   const [models, setModels] = useState<any[] | null>(null);
+  const [modelDetails, setModelDetails] = useState<any | null>(null);
 
   useEffect(() => {
     if (window.ethereum) {
@@ -101,11 +102,33 @@ export default function Home() {
     setModels(models);
   }
 
-  async function getModelDetails(modelId: any) {
+  async function getModelDetails() {
     updateContract();
+    const modelId = document.getElementById(
+      "detailsModelId"
+    ) as HTMLInputElement;
     const modelDetails = await contract.methods.getModelDetails(modelId).call();
     console.log("Model Details:", modelDetails);
+    setModelDetails(modelDetails);
   }
+
+  async function rateModel() {
+    updateContract();
+    const modelId = (document.getElementById("modelId") as HTMLInputElement)
+      .value;
+    const rating = (document.getElementById("rating") as HTMLInputElement)
+      .value;
+    await contract.methods.rateModel(modelId, rating).call();
+  }
+
+  async function purchaseModel() {
+    updateContract();
+    const modelId = (
+      document.getElementById("purchaseModelId") as HTMLInputElement
+    ).value;
+    await contract.methods.purchaseModel(modelId).call();
+  }
+
   return (
     <>
       <div id="warn" style={{ color: "red" }}>
@@ -164,11 +187,62 @@ export default function Home() {
         <button onClick={() => listModel()}>List Model</button>
       </div>
       <br />
+
+      <div>
+        <h1 className="text-3xl font-bold">Purchase</h1>
+        <div>
+          <h2>Model ID</h2>
+          <input
+            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            type="text"
+            id="purchaseModelId"
+          />
+        </div>
+        <button onClick={() => purchaseModel()}>Purchase</button>
+      </div>
+      <br />
+
       <div>
         <h1 className="text-3xl font-bold">Get model</h1>
-        <button onClick={() => getModelDetails(0)}>Get Model</button>
+        <div>
+          <h2>Model ID</h2>
+          <input
+            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            type="text"
+            id="detailsModelId"
+          />
+        </div>
+        <button onClick={() => getModelDetails()}>Get Model</button>
+        <div>
+          <p>Name: {modelDetails?.name}</p>
+          <p>Description: {modelDetails?.description}</p>
+          <p>Price: {modelDetails?.price}</p>
+          <p>Creator: {modelDetails?.creator}</p>
+          <p>Total Rating: {modelDetails?.totalRating}</p>
+          <p>Rating Count: {modelDetails?.ratingCount}</p>
+        </div>
+      </div>
+      <br />
 
-        
+      <div>
+        <h1 className="text-3xl font-bold">Rate Model</h1>
+        <div>
+          <h2>Model ID</h2>
+          <input
+            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            type="text"
+            id="modelId"
+          />
+        </div>
+        <div>
+          <h2>Rating (1-10)</h2>
+          <input
+            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            type="text"
+            id="rating"
+          />
+        </div>
+        <button onClick={() => rateModel()}>Rate Model</button>
       </div>
     </>
   );
