@@ -98,7 +98,8 @@ export default function Home() {
 
   async function getModelList() {
     updateContract();
-    const models = await contract.methods.getModels.call();
+    const models = await contract.methods.getModels().call();
+    console.log(models);
     setModels(models);
   }
 
@@ -148,15 +149,32 @@ export default function Home() {
       <div className="border-slate-300 border-x-4 border-y-4">
         <h1>Model List</h1>
         <button onClick={() => getModelList()}>Refresh</button>
-        <div>
-          {models?.map((model) => (
-            <div key={model.id}>
-              <h2>{model.name}</h2>
-              <p>{model.description}</p>
-              <p>{model.price}</p>
-            </div>
-          ))}
-        </div>
+        <table className="table-auto">
+          <thead>
+            <tr>
+              <th className="text-center" >Id</th>
+              <th className="text-center" >Name</th>
+              <th className="text-center" >Description</th>
+              <th className="text-center" >Price</th>
+              <th className="text-center" >Creator</th>
+              <th className="text-center" >Rating Count</th>
+              <th className="text-center" >Total Rating</th>
+            </tr>
+          </thead>
+          <tbody>
+            {models?.map((model, key) => (
+              <tr key={key}>
+                <td className="text-center" >{key}</td>
+                <td className="text-center" >{model.name}</td>
+                <td className="text-center" >{model.description}</td>
+                <td className="text-center" >{model.price}</td>
+                <td className="text-center" >{model.creator}</td>
+                <td className="text-center" >{model.ratingCount}</td>
+                <td className="text-center" >{model.totalRating}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <br />
       <div>
