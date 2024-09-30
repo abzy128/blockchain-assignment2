@@ -1,8 +1,7 @@
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 
-module.exports = buildModule("ModelContract", (m) => {
-  const aiModel = m.contract("ModelContract");
-
+module.exports = buildModule("AiModelContract", (m) => {
+  const aiModel = m.contract("AiModelContract");
   return { aiModel };
 });
 1
