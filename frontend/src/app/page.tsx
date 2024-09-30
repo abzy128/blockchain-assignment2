@@ -6,20 +6,40 @@ import { Web3 } from "web3";
 const contractAddress = "0x6A032186a44303e421E2f4B8adc1cB3f9cCae6c9";
 const abi = require("@/lib/abi.json");
 
+class Model {
+  name: string;
+  description: string;
+  price: string;
+  creator: string;
+  rating: string;
+
+  constructor(
+    name: string,
+    description: string,
+    price: string,
+    creator: string,
+    rating: string
+  ) {
+    this.name = name;
+    this.description = description;
+    this.price = price;
+    this.creator = creator;
+    this.rating = rating;
+  }
+}
+
 export default function Home() {
   const [web3, setWeb3] = useState<Web3 | null>(null);
   const [contract, setContract] = useState<any | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [provider, setProvider] = useState<string | null>(null);
-  const [chainId, setChainId] = useState<string | null>(null);
-  const [latestBlock, setLatestBlock] = useState<string | null>(null);
   const [accountButtonDisabled, setAccountButtonDisabled] =
     useState<boolean>(false);
   const [accounts, setAccounts] = useState<string[] | null>(null);
   const [connectedAccount, setConnectedAccount] = useState<string | null>(null);
 
   const [models, setModels] = useState<any[] | null>(null);
-  const [modelDetails, setModelDetails] = useState<any | null>(null);
+  const [modelDetails, setModelDetails] = useState<Model | null>(null);
 
   useEffect(() => {
     if (window.ethereum) {
@@ -36,26 +56,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    async function getChainId() {
-      if (web3 === null) {
-        return;
-      }
-      setChainId(`Chain ID: ${await web3.eth.getChainId()}`);
+    if (web3 === null) {
+      return;
+    } else {
+      setContract(new web3!.eth.Contract(abi, contractAddress));
     }
-
-    async function getLatestBlock() {
-      if (web3 === null) {
-        return;
-      }
-      setLatestBlock(`Latest Block: ${await web3.eth.getBlockNumber()}`);
-      const blockSubscription = await web3.eth.subscribe("newBlockHeaders");
-      blockSubscription.on("data", (block) => {
-        setLatestBlock(`Latest Block: ${block.number}`);
-      });
-    }
-
-    getChainId();
-    getLatestBlock();
   }, [web3]);
 
   async function requestAccounts() {
@@ -103,31 +108,59 @@ export default function Home() {
     setModels(models);
   }
 
-  async function getModelDetails() {
+  async function getDetiledModel() {
     updateContract();
-    const modelId = document.getElementById(
-      "detailsModelId"
-    ) as HTMLInputElement;
-    const modelDetails = await contract.methods.getModelDetails(modelId).call();
+    let intModelId = 0;
+    try {
+      intModelId = parseInt(
+        (document.getElementById("detailsModelId") as HTMLInputElement).value
+      );
+    } catch (e) {
+      alert("Model ID must be a number");
+      return;
+    }
+    const modelDetails = await contract.methods
+      .getModelDetails(intModelId)
+      .call();
+    const modelInfo = new Model(
+      modelDetails["0"] + '',
+      modelDetails["1"] + '',
+      modelDetails["2"] + '',
+      modelDetails["3"] + '',
+      modelDetails["4"] + ''
+    );
     console.log("Model Details:", modelDetails);
-    setModelDetails(modelDetails);
+    setModelDetails(modelInfo);
   }
 
-  async function rateModel() {
+  async function rateModel(modelId: number) {
     updateContract();
-    const modelId = (document.getElementById("modelId") as HTMLInputElement)
-      .value;
-    const rating = (document.getElementById("rating") as HTMLInputElement)
-      .value;
-    await contract.methods.rateModel(modelId, rating).call();
+    const rating = prompt("Enter rating (1-10)");
+    if (rating === null || rating === "") {
+      return;
+    }
+    let intRating = 0;
+    try {
+      intRating = parseInt(rating);
+    } catch (e) {
+      alert("Rating must be a number");
+      return;
+    }
+
+    if (intRating < 1 || intRating > 10) {
+      alert("Rating must be between 1 and 10");
+      return;
+    }
+    await contract.methods.rateModel(modelId, intRating).call();
+    alert(`Model ${models![modelId].name} rated with ${intRating}/10`);
   }
 
-  async function purchaseModel() {
+  async function purchaseModel(modelId: number) {
     updateContract();
-    const modelId = (
-      document.getElementById("purchaseModelId") as HTMLInputElement
-    ).value;
-    await contract.methods.purchaseModel(modelId).call();
+    const balance = await web3!.eth.getBalance(accounts![0]);
+    console.log(`Purchasing model ${modelId} with balance ${balance}`);
+    await contract.methods.purchaseModel(modelId, balance).call();
+    alert("Model purchased");
   }
 
   return (
@@ -140,37 +173,91 @@ export default function Home() {
       <div id="connectedAccount">{connectedAccount}</div>
       <div>
         <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
           onClick={() => requestAccounts()}
           id="requestAccounts"
           disabled={accountButtonDisabled}>
           Request MetaMask Accounts
         </button>
       </div>
-      <div className="border-slate-300 border-x-4 border-y-4">
-        <h1>Model List</h1>
-        <button onClick={() => getModelList()}>Refresh</button>
-        <table className="table-auto">
+      <br />
+      <div>
+        <h1 className="text-3xl">Model List</h1>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded my-3"
+          onClick={() => getModelList()}>
+          Refresh
+        </button>
+        <table className="table-auto border border-collapse border-slate-300 border-x-4 border-y-4">
           <thead>
             <tr>
-              <th className="text-center" >Id</th>
-              <th className="text-center" >Name</th>
-              <th className="text-center" >Description</th>
-              <th className="text-center" >Price</th>
-              <th className="text-center" >Creator</th>
-              <th className="text-center" >Rating Count</th>
-              <th className="text-center" >Total Rating</th>
+              <th className="border border-white px-4 py-2 text-center w-12">
+                Id
+              </th>
+              <th className="border border-white px-4 py-2 text-center">
+                Name
+              </th>
+              <th className="border border-white px-4 py-2 text-center">
+                Description
+              </th>
+              <th className="border border-white px-4 py-2 text-center">
+                Price
+              </th>
+              <th className="border border-white px-4 py-2 text-center">
+                Creator
+              </th>
+              <th className="border border-white px-4 py-2 text-center w-16">
+                Rating Count
+              </th>
+              <th className="border border-white px-4 py-2 text-center w-16">
+                Total Rating
+              </th>
+              <th className="border border-white px-4 py-2 text-center">
+                Purchase
+              </th>
+              <th className="border border-white px-4 py-2 text-center">
+                Rate
+              </th>
             </tr>
           </thead>
           <tbody>
             {models?.map((model, key) => (
               <tr key={key}>
-                <td className="text-center" >{key}</td>
-                <td className="text-center" >{model.name}</td>
-                <td className="text-center" >{model.description}</td>
-                <td className="text-center" >{model.price}</td>
-                <td className="text-center" >{model.creator}</td>
-                <td className="text-center" >{model.ratingCount}</td>
-                <td className="text-center" >{model.totalRating}</td>
+                <td className="border border-white px-4 py-2 text-center">
+                  {key}
+                </td>
+                <td className="border border-white px-4 py-2 text-center">
+                  {model.name}
+                </td>
+                <td className="border border-white px-4 py-2 text-center">
+                  {model.description}
+                </td>
+                <td className="border border-white px-4 py-2 text-center">
+                  {"" + model.price}
+                </td>
+                <td className="border border-white px-4 py-2 text-center">
+                  {model.creator}
+                </td>
+                <td className="border border-white px-4 py-2 text-center">
+                  {"" + model.ratingCount}
+                </td>
+                <td className="border border-white px-4 py-2 text-center">
+                  {"" + model.totalRating}
+                </td>
+                <td className="border border-white px-4 py-2 text-center">
+                  <button
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                    onClick={() => purchaseModel(key)}>
+                    Purchase
+                  </button>
+                </td>
+                <td className="text-center">
+                  <button
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                    onClick={() => rateModel(key)}>
+                    Rate
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -202,26 +289,16 @@ export default function Home() {
             id="price"
           />
         </div>
-        <button onClick={() => listModel()}>List Model</button>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+          onClick={() => listModel()}>
+          List Model
+        </button>
       </div>
       <br />
 
-      <div>
-        <h1 className="text-3xl font-bold">Purchase</h1>
-        <div>
-          <h2>Model ID</h2>
-          <input
-            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            type="text"
-            id="purchaseModelId"
-          />
-        </div>
-        <button onClick={() => purchaseModel()}>Purchase</button>
-      </div>
-      <br />
-
-      <div>
-        <h1 className="text-3xl font-bold">Get model</h1>
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold">Get model details</h1>
         <div>
           <h2>Model ID</h2>
           <input
@@ -230,38 +307,20 @@ export default function Home() {
             id="detailsModelId"
           />
         </div>
-        <button onClick={() => getModelDetails()}>Get Model</button>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+          onClick={() => getDetiledModel()}>
+          Get
+        </button>
         <div>
           <p>Name: {modelDetails?.name}</p>
           <p>Description: {modelDetails?.description}</p>
           <p>Price: {modelDetails?.price}</p>
           <p>Creator: {modelDetails?.creator}</p>
-          <p>Total Rating: {modelDetails?.totalRating}</p>
-          <p>Rating Count: {modelDetails?.ratingCount}</p>
+          <p>Rating: {modelDetails?.rating}</p>
         </div>
       </div>
       <br />
-
-      <div>
-        <h1 className="text-3xl font-bold">Rate Model</h1>
-        <div>
-          <h2>Model ID</h2>
-          <input
-            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            type="text"
-            id="modelId"
-          />
-        </div>
-        <div>
-          <h2>Rating (1-10)</h2>
-          <input
-            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            type="text"
-            id="rating"
-          />
-        </div>
-        <button onClick={() => rateModel()}>Rate Model</button>
-      </div>
     </>
   );
 }
