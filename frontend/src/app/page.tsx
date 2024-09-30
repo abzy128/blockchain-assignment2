@@ -151,7 +151,9 @@ export default function Home() {
       alert("Rating must be between 1 and 10");
       return;
     }
-    await contract.methods.rateModel(modelId, intRating).call();
+    await contract.methods
+      .rateModel(modelId, intRating)
+      .send({ from: accounts![0] });
     alert(`Model ${models![modelId].name} rated with ${intRating}/10`);
   }
 
@@ -163,6 +165,12 @@ export default function Home() {
     alert("Model purchased");
   }
 
+  async function withdraw() {
+    updateContract();
+    const total = await contract.methods.withdrawFunds().call();
+    alert(`Balance withdrawn. Total: ${total + ""}`);
+  }
+
   return (
     <>
       <div id="warn" style={{ color: "red" }}>
@@ -171,6 +179,7 @@ export default function Home() {
       <div id="provider">{provider}</div>
 
       <div id="connectedAccount">{connectedAccount}</div>
+
       <div>
         <button
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
@@ -180,6 +189,12 @@ export default function Home() {
           Request MetaMask Accounts
         </button>
       </div>
+      <br />
+      <button
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded my-3"
+        onClick={() => withdraw()}>
+        Widraw Funds
+      </button>
       <br />
       <div>
         <h1 className="text-3xl">Model List</h1>
